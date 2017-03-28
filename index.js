@@ -12,11 +12,46 @@ var connector = useEmulator ? new builder.ChatConnector() : new botbuilder_azure
 });
 
 var bot = new builder.UniversalBot(connector);
+var intents = new builder.IntentDialog();
 
-bot.dialog('/', function (session) {
-    console.warn('Bingo!');
-    session.send('You said ' + session.message.text);
-});
+bot.dialog('/', intents);
+
+intents.matches(/^改名/i, [
+    function(session) {
+        session.beginDialog('/profile');
+    },
+    function(session, result) {
+        session.send('好... 把你的名字改成 %s', session.userData.name);
+    }
+]);
+
+intents.onDefault([
+    function (session, args, next) {
+        if(!session.userData.name) {
+            session.beginDialog('/profile');
+        } else {
+            next();
+        }
+    },
+    function (session, result) {
+        session.send('Hi 親愛的%s!', session.userData.name);
+    }
+]);
+
+bot.dialog('/profile', [
+    function (session) {
+        builder.Prompts.text(session, 'Hi! 你叫啥？');
+    },
+    function (session, results) {
+        session.userData.name = results.response;
+        session.endDialog();
+    }
+]);
+
+// bot.dialog('/', function (session) {
+//     console.warn('Bingo!');
+//     session.send('You said ' + session.message.text);
+// });
 
 if (useEmulator) {
     var restify = require('restify');
